@@ -22,7 +22,9 @@ type (
 		version string
 	}
 	// GoogleSiteVerificationProviderModel describes the provider data model.
-	GoogleSiteVerificationProviderModel struct{}
+	GoogleSiteVerificationProviderModel struct {
+		Credentials types.String `tfsdk:"credentials"`
+	}
 )
 
 // Ensure GoogleSiteVerificationProvider satisfies various provider interfaces.
