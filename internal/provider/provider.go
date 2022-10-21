@@ -81,12 +81,12 @@ func (p *GoogleSiteVerificationProvider) Configure(ctx context.Context, req prov
 
 func (p *GoogleSiteVerificationProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		NewDNSResource,
+		NewDomainResource,
 	}
 }
 
 func (p *GoogleSiteVerificationProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewDNSTokenDataSource,
+		NewDomainDataSource,
 	}
 }

@@ -15,24 +15,23 @@ import (
 )
 
 type (
-	// DNSTokenDataSource defines the data source implementation.
-	DNSTokenDataSource struct {
+	// DomainDataSource defines the data source implementation.
+	DomainDataSource struct {
 		srv *siteverification.Service
 	}
-	// DNSTokenDataSourceModel describes the data source data model.
-	DNSTokenDataSourceModel struct {
-		Domain      types.String `tfsdk:"domain"`
+	// DomainDataSourceModel describes the data source data model.
+	DomainDataSourceModel struct {
+		ID          types.String `tfsdk:"id"`
 		RecordType  types.String `tfsdk:"record_type"`
 		RecordName  types.String `tfsdk:"record_name"`
 		RecordValue types.String `tfsdk:"record_value"`
-		ID          types.String `tfsdk:"id"`
 		Timeouts    types.Object `tfsdk:"timeouts"`
 	}
 )
 
 // Ensure provider defined types fully satisfy framework interfaces
 var (
-	_ datasource.DataSource = &DNSTokenDataSource{}
+	_ datasource.DataSource = &DomainDataSource{}
 )
 
 const (
@@ -40,22 +39,22 @@ const (
 	verificationMethod = "DNS_TXT"
 )
 
-func NewDNSTokenDataSource() datasource.DataSource {
-	return &DNSTokenDataSource{}
+func NewDomainDataSource() datasource.DataSource {
+	return &DomainDataSource{}
 }
 
-func (d *DNSTokenDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_dns_token"
+func (d *DomainDataSource) Metadata(ctx context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_domain"
 }
 
-func (d *DNSTokenDataSource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (d *DomainDataSource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
-		MarkdownDescription: "The DNS Token data source provides a token for verifying domain ownership.",
+		MarkdownDescription: "The Domain data source provides a token for verifying domain ownership.",
 		Attributes: map[string]tfsdk.Attribute{
-			"domain": {
+			"id": {
 				MarkdownDescription: "The domain you want to verify.",
-				Required:            true,
 				Type:                types.StringType,
+				Required:            true,
 			},
 			"record_type": {
 				MarkdownDescription: "The type of DNS record you should create.",
@@ -72,11 +71,6 @@ func (d *DNSTokenDataSource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				Type:                types.StringType,
 				Computed:            true,
 			},
-			"id": {
-				MarkdownDescription: "The id of the DNS Token.",
-				Type:                types.StringType,
-				Computed:            true,
-			},
 		},
 		Blocks: map[string]tfsdk.Block{
 			"timeouts": timeouts.Block(ctx, timeouts.Opts{
@@ -86,7 +80,7 @@ func (d *DNSTokenDataSource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 	}, nil
 }
 
-func (d *DNSTokenDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
+func (d *DomainDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -103,8 +97,8 @@ func (d *DNSTokenDataSource) Configure(ctx context.Context, req datasource.Confi
 	d.srv = srv
 }
 
-func (d *DNSTokenDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var data DNSTokenDataSourceModel
+func (d *DomainDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var data DomainDataSourceModel
 
 	// Read Terraform configuration data into the model
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
@@ -118,7 +112,7 @@ func (d *DNSTokenDataSource) Read(ctx context.Context, req datasource.ReadReques
 	result, err := d.srv.WebResource.
 		GetToken(&siteverification.SiteVerificationWebResourceGettokenRequest{
 			Site: &siteverification.SiteVerificationWebResourceGettokenRequestSite{
-				Identifier: data.Domain.Value,
+				Identifier: data.ID.Value,
 				Type:       resourceType,
 			},
 			VerificationMethod: verificationMethod,
@@ -137,9 +131,8 @@ func (d *DNSTokenDataSource) Read(ctx context.Context, req datasource.ReadReques
 	tflog.Trace(ctx, "read a data source")
 
 	data.RecordType = types.String{Value: "TXT"}
-	data.RecordName = data.Domain
+	data.RecordName = data.ID
 	data.RecordValue = types.String{Value: result.Token}
-	data.ID = data.Domain
 
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)

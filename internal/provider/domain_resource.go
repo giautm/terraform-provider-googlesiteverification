@@ -15,12 +15,12 @@ import (
 )
 
 type (
-	// DNSResource defines the resource implementation.
-	DNSResource struct {
+	// DomainResource defines the resource implementation.
+	DomainResource struct {
 		srv *siteverification.Service
 	}
-	// DNSResourceModel describes the resource data model.
-	DNSResourceModel struct {
+	// DomainResourceModel describes the resource data model.
+	DomainResourceModel struct {
 		Domain types.String `tfsdk:"domain"`
 		Token  types.String `tfsdk:"token"`
 		Id     types.String `tfsdk:"id"`
@@ -29,19 +29,19 @@ type (
 
 // Ensure provider defined types fully satisfy framework interfaces
 var (
-	_ resource.Resource                = &DNSResource{}
-	_ resource.ResourceWithImportState = &DNSResource{}
+	_ resource.Resource                = &DomainResource{}
+	_ resource.ResourceWithImportState = &DomainResource{}
 )
 
-func NewDNSResource() resource.Resource {
-	return &DNSResource{}
+func NewDomainResource() resource.Resource {
+	return &DomainResource{}
 }
 
-func (r *DNSResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (r *DomainResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_dns"
 }
 
-func (r *DNSResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (r *DomainResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		MarkdownDescription: "Manages a DNS verification for a domain.",
 		Attributes: map[string]tfsdk.Attribute{
@@ -73,7 +73,7 @@ func (r *DNSResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnos
 	}, nil
 }
 
-func (r *DNSResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *DomainResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	// Prevent panic if the provider has not been configured.
 	if req.ProviderData == nil {
 		return
@@ -90,8 +90,8 @@ func (r *DNSResource) Configure(ctx context.Context, req resource.ConfigureReque
 	r.srv = srv
 }
 
-func (r *DNSResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data *DNSResourceModel
+func (r *DomainResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data *DomainResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -129,8 +129,8 @@ func (r *DNSResource) Create(ctx context.Context, req resource.CreateRequest, re
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *DNSResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data *DNSResourceModel
+func (r *DomainResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data *DomainResourceModel
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
@@ -149,12 +149,12 @@ func (r *DNSResource) Read(ctx context.Context, req resource.ReadRequest, resp *
 	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
-func (r *DNSResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (r *DomainResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	// Do nothing because we have RequiresReplace on domain and token
 }
 
-func (r *DNSResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data *DNSResourceModel
+func (r *DomainResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data *DomainResourceModel
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
@@ -170,7 +170,7 @@ func (r *DNSResource) Delete(ctx context.Context, req resource.DeleteRequest, re
 	}
 }
 
-func (r *DNSResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *DomainResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	_, err := r.srv.WebResource.Get(req.ID).Context(ctx).Do()
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error",
@@ -194,7 +194,7 @@ func (r *DNSResource) ImportState(ctx context.Context, req resource.ImportStateR
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &DNSResourceModel{
+	resp.Diagnostics.Append(resp.State.Set(ctx, &DomainResourceModel{
 		Id:     types.String{Value: req.ID},
 		Domain: types.String{Value: domain},
 		Token:  types.String{Value: result.Token},
