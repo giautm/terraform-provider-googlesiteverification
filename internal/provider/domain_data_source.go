@@ -117,7 +117,7 @@ func (d *DomainDataSource) Read(ctx context.Context, req datasource.ReadRequest,
 			},
 			VerificationMethod: verificationMethod,
 		}).
-		Context(ctx).Do()
+		Do()
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Client Error",
