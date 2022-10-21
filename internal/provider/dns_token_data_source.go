@@ -3,7 +3,9 @@ package provider
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -24,6 +26,7 @@ type (
 		RecordName  types.String `tfsdk:"record_name"`
 		RecordValue types.String `tfsdk:"record_value"`
 		ID          types.String `tfsdk:"id"`
+		Timeouts    types.Object `tfsdk:"timeouts"`
 	}
 )
 
@@ -33,7 +36,7 @@ var (
 )
 
 const (
-	siteType           = "INET_DOMAIN"
+	resourceType       = "INET_DOMAIN"
 	verificationMethod = "DNS_TXT"
 )
 
@@ -75,6 +78,11 @@ func (d *DNSTokenDataSource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.
 				Computed:            true,
 			},
 		},
+		Blocks: map[string]tfsdk.Block{
+			"timeouts": timeouts.Block(ctx, timeouts.Opts{
+				Read: true,
+			}),
+		},
 	}, nil
 }
 
@@ -104,14 +112,18 @@ func (d *DNSTokenDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
+	readTimeout := timeouts.Read(ctx, data.Timeouts, 60*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+	defer cancel()
 	result, err := d.srv.WebResource.
 		GetToken(&siteverification.SiteVerificationWebResourceGettokenRequest{
 			Site: &siteverification.SiteVerificationWebResourceGettokenRequestSite{
 				Identifier: data.Domain.Value,
-				Type:       siteType,
+				Type:       resourceType,
 			},
 			VerificationMethod: verificationMethod,
-		}).Context(ctx).Do()
+		}).
+		Context(ctx).Do()
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Client Error",

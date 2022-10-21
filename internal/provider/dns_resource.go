@@ -103,7 +103,7 @@ func (r *DNSResource) Create(ctx context.Context, req resource.CreateRequest, re
 		Insert(verificationMethod, &siteverification.SiteVerificationWebResourceResource{
 			Site: &siteverification.SiteVerificationWebResourceResourceSite{
 				Identifier: data.Domain.Value,
-				Type:       siteType,
+				Type:       resourceType,
 			},
 		}).
 		Context(ctx).Do()
@@ -183,7 +183,7 @@ func (r *DNSResource) ImportState(ctx context.Context, req resource.ImportStateR
 		GetToken(&siteverification.SiteVerificationWebResourceGettokenRequest{
 			Site: &siteverification.SiteVerificationWebResourceGettokenRequestSite{
 				Identifier: domain,
-				Type:       siteType,
+				Type:       resourceType,
 			},
 			VerificationMethod: verificationMethod,
 		}).
