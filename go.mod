@@ -1,4 +1,4 @@
-module github.com/hashicorp/terraform-provider-scaffolding-framework
+module giautm.dev/googlesiteverification
 
 go 1.19
 
