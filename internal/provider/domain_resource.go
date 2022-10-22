@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -116,6 +117,11 @@ func (r *DomainResource) Create(ctx context.Context, req resource.CreateRequest,
 		if err != nil {
 			if checkErr(err, errTokenNotFound) {
 				tflog.Warn(ctx, "Trying to create verification again")
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(5 * time.Second):
+				}
 				continue
 			}
 			resp.Diagnostics.AddError("Client Error",
@@ -179,6 +185,11 @@ func (r *DomainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		if err != nil {
 			if checkErr(err, errTokenExists) {
 				tflog.Warn(ctx, "Trying to delete verification again")
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(5 * time.Second):
+				}
 				continue
 			}
 			resp.Diagnostics.AddError("Client Error",
