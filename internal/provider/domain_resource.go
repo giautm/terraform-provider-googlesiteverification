@@ -43,7 +43,7 @@ func NewDomainResource() resource.Resource {
 }
 
 func (r *DomainResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_dns"
+	resp.TypeName = req.ProviderTypeName + "_domain"
 }
 
 func (r *DomainResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
