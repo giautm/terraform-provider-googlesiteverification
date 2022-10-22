@@ -2,14 +2,18 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"google.golang.org/api/option"
 	"google.golang.org/api/siteverification/v1"
 )
 
@@ -66,9 +70,24 @@ func (p *GoogleSiteVerificationProvider) Configure(ctx context.Context, req prov
 		return
 	}
 
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
-	srv, err := siteverification.NewService(context.Background())
+	var opts []option.ClientOption
+	if customCreds := data.Credentials.Value; customCreds != "" {
+		var optCreds option.ClientOption
+		if json.Valid([]byte(customCreds)) {
+			optCreds = option.WithCredentialsJSON([]byte(customCreds))
+		} else {
+			if _, err := os.Stat(customCreds); err != nil {
+				resp.Diagnostics.AddAttributeError(path.Root("credentials"),
+					"Invalid credentials",
+					fmt.Sprintf("The credentials file %q could not be found.", customCreds),
+				)
+				return
+			}
+			optCreds = option.WithCredentialsFile(customCreds)
+		}
+		opts = append(opts, optCreds)
+	}
+	srv, err := siteverification.NewService(context.Background(), opts...)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create siteverification service",

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
+	"google.golang.org/api/googleapi"
 	"google.golang.org/api/siteverification/v1"
 )
 
@@ -31,6 +33,9 @@ type (
 var (
 	_ resource.Resource                = &DomainResource{}
 	_ resource.ResourceWithImportState = &DomainResource{}
+
+	errTokenNotFound = "The necessary verification token could not be found on your site."
+	errTokenExists   = "You cannot unverify your ownership of this site until your verification token (meta tag, HTML file, Google Analytics tracking code, Google Tag Manager container code, or DNS record) has been removed."
 )
 
 func NewDomainResource() resource.Resource {
@@ -99,27 +104,34 @@ func (r *DomainResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	result, err := r.srv.WebResource.
-		Insert(verificationMethod, &siteverification.SiteVerificationWebResourceResource{
-			Site: &siteverification.SiteVerificationWebResourceResourceSite{
-				Identifier: data.Domain.Value,
-				Type:       resourceType,
-			},
-		}).
-		Context(ctx).Do()
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error",
-			fmt.Sprintf("Unable to create verification, got error: %s", err))
-		return
-	}
+	for {
+		result, err := r.srv.WebResource.
+			Insert(verificationMethod, &siteverification.SiteVerificationWebResourceResource{
+				Site: &siteverification.SiteVerificationWebResourceResourceSite{
+					Identifier: data.Domain.Value,
+					Type:       resourceType,
+				},
+			}).
+			Context(ctx).Do()
+		if err != nil {
+			if checkErr(err, errTokenNotFound) {
+				tflog.Warn(ctx, "Trying to create verification again")
+				continue
+			}
+			resp.Diagnostics.AddError("Client Error",
+				fmt.Sprintf("Unable to create verification, got error: %s", err))
+			return
+		}
 
-	id, err := url.QueryUnescape(result.Id)
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error",
-			fmt.Sprintf("failed to urldecode id %s, %s", result.Id, err))
-		return
+		id, err := url.QueryUnescape(result.Id)
+		if err != nil {
+			resp.Diagnostics.AddError("Client Error",
+				fmt.Sprintf("failed to urldecode id %s, %s", result.Id, err))
+			return
+		}
+		data.Id = types.String{Value: id}
+		break
 	}
-	data.Id = types.String{Value: id}
 
 	// Write logs using the tflog package
 	// Documentation: https://terraform.io/plugin/log
@@ -162,10 +174,16 @@ func (r *DomainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	err := r.srv.WebResource.Delete(data.Id.Value).Context(ctx).Do()
-	if err != nil {
-		resp.Diagnostics.AddError("Client Error",
-			fmt.Sprintf("Unable to delete verification, got error: %s", err))
+	for {
+		err := r.srv.WebResource.Delete(data.Id.Value).Context(ctx).Do()
+		if err != nil {
+			if checkErr(err, errTokenExists) {
+				tflog.Warn(ctx, "Trying to delete verification again")
+				continue
+			}
+			resp.Diagnostics.AddError("Client Error",
+				fmt.Sprintf("Unable to delete verification, got error: %s", err))
+		}
 		return
 	}
 }
@@ -199,4 +217,9 @@ func (r *DomainResource) ImportState(ctx context.Context, req resource.ImportSta
 		Domain: types.String{Value: domain},
 		Token:  types.String{Value: result.Token},
 	})...)
+}
+
+func checkErr(err error, msg string) bool {
+	var apierr *googleapi.Error
+	return errors.As(err, &apierr) && apierr.Code == 400 && strings.Contains(apierr.Message, msg)
 }
