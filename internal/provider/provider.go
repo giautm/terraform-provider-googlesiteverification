@@ -68,7 +68,7 @@ func (p *GoogleSiteVerificationProvider) Configure(ctx context.Context, req prov
 
 	// Configuration values are now available.
 	// if data.Endpoint.IsNull() { /* ... */ }
-	srv, err := siteverification.NewService(ctx)
+	srv, err := siteverification.NewService(context.Background())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to create siteverification service",
