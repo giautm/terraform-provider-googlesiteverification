@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework-timeouts/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -24,9 +25,10 @@ type (
 	}
 	// DomainResourceModel describes the resource data model.
 	DomainResourceModel struct {
-		Domain types.String `tfsdk:"domain"`
-		Token  types.String `tfsdk:"token"`
-		Id     types.String `tfsdk:"id"`
+		Domain   types.String `tfsdk:"domain"`
+		Token    types.String `tfsdk:"token"`
+		Id       types.String `tfsdk:"id"`
+		Timeouts types.Object `tfsdk:"timeouts"`
 	}
 )
 
@@ -37,6 +39,7 @@ var (
 
 	errTokenNotFound = "The necessary verification token could not be found on your site."
 	errTokenExists   = "You cannot unverify your ownership of this site until your verification token (meta tag, HTML file, Google Analytics tracking code, Google Tag Manager container code, or DNS record) has been removed."
+	sleepSeconds     = 10 * time.Second
 )
 
 func NewDomainResource() resource.Resource {
@@ -76,6 +79,13 @@ func (r *DomainResource) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diag
 				Type: types.StringType,
 			},
 		},
+		Blocks: map[string]tfsdk.Block{
+			"timeouts": timeouts.Block(ctx, timeouts.Opts{
+				Read:   true,
+				Create: true,
+				Delete: true,
+			}),
+		},
 	}, nil
 }
 
@@ -105,6 +115,9 @@ func (r *DomainResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
+	createTimeout := timeouts.Create(ctx, data.Timeouts, 60*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, createTimeout)
+	defer cancel()
 	for {
 		result, err := r.srv.WebResource.
 			Insert(verificationMethod, &siteverification.SiteVerificationWebResourceResource{
@@ -120,7 +133,7 @@ func (r *DomainResource) Create(ctx context.Context, req resource.CreateRequest,
 				select {
 				case <-ctx.Done():
 					return
-				case <-time.After(5 * time.Second):
+				case <-time.After(sleepSeconds):
 				}
 				continue
 			}
@@ -156,6 +169,9 @@ func (r *DomainResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
+	readTimeout := timeouts.Read(ctx, data.Timeouts, 60*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, readTimeout)
+	defer cancel()
 	_, err := r.srv.WebResource.Get(data.Id.Value).Context(ctx).Do()
 	if err != nil {
 		resp.Diagnostics.AddError("Client Error",
@@ -180,6 +196,9 @@ func (r *DomainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
+	deleteTimeout := timeouts.Delete(ctx, data.Timeouts, 60*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
+	defer cancel()
 	for {
 		err := r.srv.WebResource.Delete(data.Id.Value).Context(ctx).Do()
 		if err != nil {
@@ -188,7 +207,7 @@ func (r *DomainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 				select {
 				case <-ctx.Done():
 					return
-				case <-time.After(5 * time.Second):
+				case <-time.After(sleepSeconds):
 				}
 				continue
 			}

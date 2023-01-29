@@ -51,5 +51,9 @@ func testAccDomainResourceConfig(domain string) string {
 		depends_on = [
 			cloudflare_record.verification,
 		]
+		timeouts {
+			create = "5m"
+			delete = "15m"
+		}
 	}`, domain, os.Getenv("CLOUDFLARE_ZONE_ID"))
 }
