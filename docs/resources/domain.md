@@ -20,8 +20,21 @@ Manages a DNS verification for a domain.
 - `domain` (String) The domain you want to verify.
 - `token` (String) The token you got from data.googlesiteverification_dns_token. This forces a new verification in case the token changes.
 
+### Optional
+
+- `timeouts` (Block, Optional) (see [below for nested schema](#nestedblock--timeouts))
+
 ### Read-Only
 
 - `id` (String) The id of the verification.
+
+<a id="nestedblock--timeouts"></a>
+### Nested Schema for `timeouts`
+
+Optional:
+
+- `create` (String)
+- `delete` (String)
+- `read` (String)
 
 
