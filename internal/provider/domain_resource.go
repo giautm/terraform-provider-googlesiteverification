@@ -39,7 +39,7 @@ var (
 
 	errTokenNotFound = "The necessary verification token could not be found on your site."
 	errTokenExists   = "You cannot unverify your ownership of this site until your verification token (meta tag, HTML file, Google Analytics tracking code, Google Tag Manager container code, or DNS record) has been removed."
-	sleepSeconds     = 10 * time.Second
+	sleepSeconds     = 60 * time.Second
 )
 
 func NewDomainResource() resource.Resource {
@@ -115,7 +115,7 @@ func (r *DomainResource) Create(ctx context.Context, req resource.CreateRequest,
 		return
 	}
 
-	createTimeout := timeouts.Create(ctx, data.Timeouts, 60*time.Second)
+	createTimeout := timeouts.Create(ctx, data.Timeouts, sleepSeconds*5)
 	ctx, cancel := context.WithTimeout(ctx, createTimeout)
 	defer cancel()
 	for {
@@ -169,7 +169,7 @@ func (r *DomainResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	readTimeout := timeouts.Read(ctx, data.Timeouts, 60*time.Second)
+	readTimeout := timeouts.Read(ctx, data.Timeouts, sleepSeconds*5)
 	ctx, cancel := context.WithTimeout(ctx, readTimeout)
 	defer cancel()
 	_, err := r.srv.WebResource.Get(data.Id.Value).Context(ctx).Do()
@@ -196,7 +196,7 @@ func (r *DomainResource) Delete(ctx context.Context, req resource.DeleteRequest,
 		return
 	}
 
-	deleteTimeout := timeouts.Delete(ctx, data.Timeouts, 60*time.Second)
+	deleteTimeout := timeouts.Delete(ctx, data.Timeouts, sleepSeconds*5)
 	ctx, cancel := context.WithTimeout(ctx, deleteTimeout)
 	defer cancel()
 	for {
